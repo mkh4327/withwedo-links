@@ -24,7 +24,23 @@
     // Exact authority/path match prevents redirects, userinfo, ports, encoded
     // path segments, and alternate schemes. Data is accepted only after '#'.
     const match = /^https:\/\/mkh4327\.github\.io\/withwedo-links\/([a-z-]+)\/#(.+)$/.exec(input);
-    if (!match || !owns(routes, match[1])) return null;
+    if (!match || (!owns(routes, match[1]) && match[1] !== "invite")) return null;
+    if (match[1] === "invite") {
+      const parts = match[2].split("&");
+      if (parts.length !== 1) return null;
+      const pair = parts[0].split("=");
+      if (pair.length !== 2) return null;
+      try {
+        const key = decodeURIComponent(pair[0]);
+        const code = decodeURIComponent(pair[1]);
+        if (key !== "invite_code" || code.length < 8 || code.length > 32 || /[^A-Za-z0-9]/.test(code)) return null;
+        // Only fill the existing join form. The app still validates expiry,
+        // permissions, and the user's explicit confirmation before joining.
+        return "com.gachi.todo://invite?invite_code=" + code.toUpperCase();
+      } catch (_) {
+        return null;
+      }
+    }
     const parts = match[2].split("&");
     if (parts.length !== 2) return null;
     const values = Object.create(null);
@@ -61,7 +77,9 @@
     button.setAttribute("href", target);
     button.removeAttribute("aria-disabled");
     button.removeAttribute("tabindex");
-    status.textContent = "앱에서 보기를 눌러 공유한 내용을 열어 보세요.";
+    status.textContent = target.indexOf("com.gachi.todo://invite?") === 0
+      ? "앱에서 초대 확인을 눌러 그룹 참여 화면을 열어 보세요."
+      : "앱에서 보기를 눌러 공유한 내용을 열어 보세요.";
   }
 
   if (typeof module === "object" && module.exports) {
